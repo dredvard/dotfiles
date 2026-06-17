@@ -2,6 +2,11 @@
 set -euo pipefail
 
 install_packages() {
+  if ! command -v sudo >/dev/null 2>&1 || ! sudo -n true 2>/dev/null; then
+    echo "sudo is unavailable; skipping system package installation."
+    return
+  fi
+
   if command -v apt-get >/dev/null 2>&1; then
     sudo apt-get update
     sudo apt-get install -y zsh git vim curl ripgrep
@@ -11,6 +16,22 @@ install_packages() {
     brew install zsh git vim curl ripgrep
   else
     echo "Install zsh, git, vim, curl, and ripgrep with this system's package manager."
+  fi
+}
+
+require_commands() {
+  local missing=()
+
+  for command_name in "$@"; do
+    if ! command -v "$command_name" >/dev/null 2>&1; then
+      missing+=("$command_name")
+    fi
+  done
+
+  if ((${#missing[@]})); then
+    echo "Missing required commands: ${missing[*]}" >&2
+    echo "Install them with your system package manager or ask an administrator." >&2
+    exit 1
   fi
 }
 
@@ -24,6 +45,7 @@ clone_if_missing() {
 }
 
 install_packages
+require_commands zsh git vim curl
 
 if [[ ! -d "$HOME/.oh-my-zsh" ]]; then
   RUNZSH=no CHSH=no KEEP_ZSHRC=yes sh -c \
